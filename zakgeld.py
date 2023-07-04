@@ -232,7 +232,20 @@ def set_balance(update, context):
 
 def update_balance(update, context):
     chat_id = update.message.chat_id
+    print(chat_id)
 
+    # Lees de toegestane Telegram-ID's uit het bestand "secret.dat"
+    allowed_ids = set()
+    with open('secret.dat', 'r') as file:
+        for line in file:
+            allowed_ids.add(int(line.strip()))
+
+    # Controleer of de huidige gebruiker geautoriseerd is
+    if chat_id not in allowed_ids:
+        context.bot.send_message(chat_id=chat_id, text="Je bent niet geautoriseerd om deze functie uit te voeren.")
+        return
+    
+    context.bot.send_message(chat_id=chat_id, text="Je bent geautoriseerd om deze functie uit te voeren.")
     # Verbinding maken met de database
     connection = sqlite3.connect('database.db')
     cursor = connection.cursor()
@@ -252,7 +265,7 @@ def update_balance(update, context):
         cursor.execute(update_query, (new_balance, name))
 
         # Stuur een bericht naar het corresponderende Telegram-ID
-        message = f"Beste {name}, je balans is bijgewerkt!\n\nOude balans: {balance}\nNieuwe balans: {new_balance}"
+        message = f"Beste gebruiker.\n Het zakgeld voor {name} wordt bijgewerkt!\n\nEr wordt {weekly_allowance} euro toegevoegd aan het huidige saldo.\n\nHuidige saldo: {balance} euro.\nNieuwe saldo: {new_balance} euro."
         context.bot.send_message(chat_id=chat_id, text=message)
 
     # Database wijzigingen opslaan
@@ -262,7 +275,7 @@ def update_balance(update, context):
     connection.close()
 
     # Stuur een bericht naar de huidige chat met de bevestiging
-    context.bot.send_message(chat_id=chat_id, text="Het wekelijkse zakgeld is bijgeschreven.")
+    context.bot.send_message(chat_id=chat_id, text="Het wekelijkse zakgeld is bijgeschreven! Tot volgende week. ")
 
 
 
