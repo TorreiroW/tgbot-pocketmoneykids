@@ -4,6 +4,7 @@ from telegram.ext import MessageHandler, Filters
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 import datetime
 import time
+import re
 
 def read_token_from_file():
     # Het lezen van het Telegram-token uit het bestand
@@ -144,6 +145,7 @@ def show_configuration(update, context):
     cursor.close()
     conn.close()
 
+
 def remove_name(update, context):
     chat_id = update.message.chat_id
 
@@ -168,10 +170,6 @@ def remove_name(update, context):
 
         context.bot.send_message(chat_id=chat_id, text="Selecteer de naam die je wilt verwijderen:", reply_markup=reply_markup)
 
-        # Een filterfunctie voor het controleren van de invoer van de gebruiker
-        def name_filter(update, context):
-            return update.message.text in names
-
         # Het instellen van een callback-functie voor het verwerken van de invoer
         def handle_name_input(update, context):
             name = update.message.text
@@ -187,13 +185,19 @@ def remove_name(update, context):
             conn.close()
 
         # Het toevoegen van de filters en callback-functie aan de dispatcher
-        context.dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command & name_filter, handle_name_input))
+        context.dispatcher.add_handler(
+            MessageHandler(
+                Filters.regex(f"({'|'.join(map(re.escape, names))})"),
+                handle_name_input
+            )
+        )
     else:
         context.bot.send_message(chat_id=chat_id, text="Er zijn geen configuraties gevonden voor dit chat-id.")
 
         # De cursor en de SQLite-verbinding sluiten
         cursor.close()
         conn.close()
+
 
 def set_balance(update, context):
     chat_id = update.message.chat_id
@@ -226,6 +230,35 @@ def set_balance(update, context):
     else:
         context.bot.send_message(chat_id=chat_id, text="Ongeldige configuratie. Gebruik: /setbalance <naam> <saldo>")
 
+def update_balance(update,context,):
+    chat_id = update.message.chat_id
+    # Verbinding maken met de database
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+
+    # Query om alle items in de database op te halen
+    query = "SELECT name, weekly_allowance, balance FROM children"
+    cursor.execute(query)
+    rows = cursor.fetchall()
+
+    # Loop door de rijen en update de balans
+    for row in rows:
+        name, weekly_allowance, balance = row
+        new_balance = balance + weekly_allowance
+
+        # Query om de balans bij te werken voor het huidige item
+        update_query = "UPDATE children SET balance = ? WHERE name = ?"
+        cursor.execute(update_query, (new_balance, name))
+
+    # Database wijzigingen opslaan
+    connection.commit()
+    context.bot.send_message(chat_id=chat_id, text="Het wekelijkse zakgeld is bijgeschreven.")
+
+
+    # Verbinding met de database sluiten
+    connection.close()
+
+
 
 # Het toevoegen van de commando's aan de dispatcher
 dispatcher.add_handler(CommandHandler("start", start))
@@ -234,6 +267,7 @@ dispatcher.add_handler(CommandHandler("balance", check_balance))
 dispatcher.add_handler(CommandHandler("setbalance", set_balance))
 dispatcher.add_handler(CommandHandler("showconfig", show_configuration))
 dispatcher.add_handler(CommandHandler("removename", remove_name))
+dispatcher.add_handler(CommandHandler("updatebalance", update_balance))
 
 
 # Het maken en starten van de updater
@@ -260,6 +294,7 @@ def main():
     dispatcher.add_handler(CommandHandler("help", help_command))
     dispatcher.add_handler(CommandHandler("showconfig", show_configuration))
     dispatcher.add_handler(CommandHandler("removename", remove_name))
+    dispatcher.add_handler(CommandHandler("updatebalance", update_balance))
 
     # Het starten van de bot
     updater.start_polling()
@@ -289,6 +324,7 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler("setbalance", set_balance))
     dispatcher.add_handler(CommandHandler("showconfig", show_configuration))
     dispatcher.add_handler(CommandHandler("removename", remove_name))
+    dispatcher.add_handler(CommandHandler("updatebalance", update_balance))
 
     # Het starten van de updater
     updater.start_polling()
