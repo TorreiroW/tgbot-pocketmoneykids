@@ -230,13 +230,14 @@ def set_balance(update, context):
     else:
         context.bot.send_message(chat_id=chat_id, text="Ongeldige configuratie. Gebruik: /setbalance <naam> <saldo>")
 
-def update_balance():
+def update_balance(update,context,):
+    chat_id = update.message.chat_id
     # Verbinding maken met de database
     connection = sqlite3.connect('database.db')
     cursor = connection.cursor()
 
     # Query om alle items in de database op te halen
-    query = "SELECT name, weekly_allowance, balance FROM zakgeld"
+    query = "SELECT name, weekly_allowance, balance FROM children"
     cursor.execute(query)
     rows = cursor.fetchall()
 
@@ -246,14 +247,17 @@ def update_balance():
         new_balance = balance + weekly_allowance
 
         # Query om de balans bij te werken voor het huidige item
-        update_query = "UPDATE zakgeld SET balance = ? WHERE name = ?"
+        update_query = "UPDATE children SET balance = ? WHERE name = ?"
         cursor.execute(update_query, (new_balance, name))
 
     # Database wijzigingen opslaan
     connection.commit()
+    context.bot.send_message(chat_id=chat_id, text="Het wekelijkse zakgeld is bijgeschreven.")
+
 
     # Verbinding met de database sluiten
     connection.close()
+
 
 
 # Het toevoegen van de commando's aan de dispatcher
