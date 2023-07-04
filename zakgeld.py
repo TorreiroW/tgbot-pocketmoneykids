@@ -45,7 +45,15 @@ def create_database_if_not_exists():
 
 def start(update, context):
     chat_id = update.message.chat_id
-    context.bot.send_message(chat_id=chat_id, text="Welkom! Stuur /configure <naam> <zakgeld> om een kind te configureren.")
+    welcome_message = """Welkom! Dit zijn de beschikbare commandos:\n
+        /start - Start dit gesprek opnieuw.
+        /configure <naam> <wekelijkse_verhoging> - Configureert voor <naam> de wekelijkse verhoging. In euro's
+        /balance <naam> - Geeft het huidige saldo weer voor <naam>. Indien geen <naam> opgegeven, geeft het het saldo weer voor alle geregistreerde namen
+        /setbalance <naam> <bedrag> - Zet het huidige saldo voor <naam> op <bedrag>. In euro's
+        /showconfig - Geeft alle geconfigureerde informatie weer
+        /removename <naam> - verwijdert de gegevens voor <naam>
+    """
+    context.bot.send_message(chat_id=chat_id, text=welcome_message)
 
 
 def configure(update, context):
