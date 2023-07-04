@@ -230,33 +230,39 @@ def set_balance(update, context):
     else:
         context.bot.send_message(chat_id=chat_id, text="Ongeldige configuratie. Gebruik: /setbalance <naam> <saldo>")
 
-def update_balance(update,context,):
+def update_balance(update, context):
     chat_id = update.message.chat_id
+
     # Verbinding maken met de database
     connection = sqlite3.connect('database.db')
     cursor = connection.cursor()
 
     # Query om alle items in de database op te halen
-    query = "SELECT name, weekly_allowance, balance FROM children"
+    query = "SELECT  name, weekly_allowance, balance, chat_id FROM children"
     cursor.execute(query)
     rows = cursor.fetchall()
 
     # Loop door de rijen en update de balans
     for row in rows:
-        name, weekly_allowance, balance = row
+        name, weekly_allowance, balance, chat_id = row
         new_balance = balance + weekly_allowance
 
         # Query om de balans bij te werken voor het huidige item
         update_query = "UPDATE children SET balance = ? WHERE name = ?"
         cursor.execute(update_query, (new_balance, name))
 
+        # Stuur een bericht naar het corresponderende Telegram-ID
+        message = f"Beste {name}, je balans is bijgewerkt!\n\nOude balans: {balance}\nNieuwe balans: {new_balance}"
+        context.bot.send_message(chat_id=chat_id, text=message)
+
     # Database wijzigingen opslaan
     connection.commit()
-    context.bot.send_message(chat_id=chat_id, text="Het wekelijkse zakgeld is bijgeschreven.")
 
-
-    # Verbinding met de database sluiten
+    # Sluit de databaseverbinding
     connection.close()
+
+    # Stuur een bericht naar de huidige chat met de bevestiging
+    context.bot.send_message(chat_id=chat_id, text="Het wekelijkse zakgeld is bijgeschreven.")
 
 
 
