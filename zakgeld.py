@@ -238,6 +238,47 @@ def set_balance(update, context):
     else:
         context.bot.send_message(chat_id=chat_id, text="Ongeldige configuratie. Gebruik: /setbalance <naam> <saldo>")
 
+def withdraw(update, context):
+    chat_id = update.message.chat_id
+    args = context.args
+
+    # Controleren of er een naam en bedrag zijn opgegeven
+    if len(args) != 2:
+        context.bot.send_message(chat_id=chat_id, text="Gebruik: /withdraw <naam> <bedrag>")
+        return
+
+    name = args[0]
+    amount = float(args[1])
+
+    # Het maken van een nieuwe SQLite-verbinding en cursor
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    # Controleren of de naam bestaat voor het huidige chat_id
+    cursor.execute('SELECT balance FROM children WHERE chat_id = ? AND name = ?', (chat_id, name))
+    result = cursor.fetchone()
+
+    if result is None:
+        context.bot.send_message(chat_id=chat_id, text=f"De naam '{name}' is niet geconfigureerd voor deze Telegram-client.")
+    else:
+        current_balance = result[0]
+
+        # Controleren of het saldo voldoende is voor de opname
+        if current_balance < amount:
+            context.bot.send_message(chat_id=chat_id, text="Onvoldoende saldo voor opname.")
+        else:
+            new_balance = current_balance - amount
+
+            # Het bijwerken van het saldo in de database
+            cursor.execute('UPDATE children SET balance = ? WHERE chat_id = ? AND name = ?', (new_balance, chat_id, name))
+            conn.commit()
+            context.bot.send_message(chat_id=chat_id, text=f"Bedrag €{amount} is opgenomen van het saldo van '{name}'. Nieuw saldo: €{new_balance}")
+
+    # De cursor en de SQLite-verbinding sluiten
+    cursor.close()
+    conn.close()
+
+
 def update_balance(update, context):
     chat_id = update.message.chat_id
     print(chat_id)
@@ -294,6 +335,7 @@ dispatcher.add_handler(CommandHandler("balance", check_balance))
 dispatcher.add_handler(CommandHandler("setbalance", set_balance))
 dispatcher.add_handler(CommandHandler("showconfig", show_configuration))
 dispatcher.add_handler(CommandHandler("removename", remove_name))
+dispatcher.add_handler(CommandHandler("withdraw", withdraw))
 dispatcher.add_handler(CommandHandler("updatebalance", update_balance))
 
 
@@ -321,6 +363,7 @@ def main():
     dispatcher.add_handler(CommandHandler("help", help_command))
     dispatcher.add_handler(CommandHandler("showconfig", show_configuration))
     dispatcher.add_handler(CommandHandler("removename", remove_name))
+    dispatcher.add_handler(CommandHandler("withdraw", withdraw))
     dispatcher.add_handler(CommandHandler("updatebalance", update_balance))
 
     # Het starten van de bot
